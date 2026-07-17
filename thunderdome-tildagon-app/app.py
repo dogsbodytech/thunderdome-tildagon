@@ -1,3 +1,6 @@
+import binascii
+import machine
+
 import app
 from umqtt.simple import MQTTClient
 import wifi
@@ -5,7 +8,8 @@ import wifi
 from app_components.tokens import line_height
 from events.input import Buttons, BUTTON_TYPES
 
-TOPIC = b"dogsbody/dome"
+# mqtt.emf.camp only allows anonymous publish under open/ (2026 policy)
+TOPIC = b"open/dogsbody/dome"
 
 class ThunderdomeApp(app.App):
     def __init__(self):
@@ -33,7 +37,10 @@ class ThunderdomeApp(app.App):
 
     def _connect_mqtt(self):
         try:
-            self.client = MQTTClient("dogsbody", "test.mosquitto.org")
+            # sim's fake machine module lacks unique_id; real badge has it
+            unique = getattr(machine, "unique_id", lambda: b"sim")()
+            client_id = b"dogsbody-" + binascii.hexlify(unique)
+            self.client = MQTTClient(client_id, "mqtt.emf.camp")
             self.client.connect()
             self.client.publish(TOPIC, b"hello from a sami badge")
             self.message = "Message sent"
