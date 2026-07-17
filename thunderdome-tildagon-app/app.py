@@ -22,6 +22,20 @@ class DomeControl:
     DOWN = "DOWN"
     LEFT = "LEFT"
     CANCEL = "CANCEL"
+    TOUCH01 = "TOUCH01"
+    TOUCH02 = "TOUCH02"
+    TOUCH03 = "TOUCH03"
+    TOUCH04 = "TOUCH04"
+    TOUCH05 = "TOUCH05"
+    TOUCH06 = "TOUCH06"
+    TOUCH07 = "TOUCH07"
+    TOUCH08 = "TOUCH08"
+    TOUCH09 = "TOUCH09"
+    TOUCH10 = "TOUCH10"
+    TOUCH11 = "TOUCH11"
+    TOUCH12 = "TOUCH12"
+    LEFTPROX = "LEFTPROX"
+    RIGHTPROX = "RIGHTPROX"
 
 
 # One colour per strut class, index-matched to DOME_SEGMENTS.
@@ -156,6 +170,62 @@ class ThunderdomeApp(app.App):
             if self._publish_button(DomeControl.CANCEL):
                 self.status = "Sent CANCEL"
             self.minimise()
+
+        elif event.button.name == "TOUCH01":
+            if self._publish_button(DomeControl.TOUCH01):
+                self.status = "Sent TOUCH01"
+
+        elif event.button.name == "TOUCH02":
+            if self._publish_button(DomeControl.TOUCH02):
+                self.status = "Sent TOUCH02"
+
+        elif event.button.name == "TOUCH03":
+            if self._publish_button(DomeControl.TOUCH03):
+                self.status = "Sent TOUCH03"
+
+        elif event.button.name == "TOUCH04":
+            if self._publish_button(DomeControl.TOUCH04):
+                self.status = "Sent TOUCH04"
+
+        elif event.button.name == "TOUCH05":
+            if self._publish_button(DomeControl.TOUCH05):
+                self.status = "Sent TOUCH05"
+
+        elif event.button.name == "TOUCH06":
+            if self._publish_button(DomeControl.TOUCH06):
+                self.status = "Sent TOUCH06"
+
+        elif event.button.name == "TOUCH07":
+            if self._publish_button(DomeControl.TOUCH07):
+                self.status = "Sent TOUCH07"
+
+        elif event.button.name == "TOUCH08":
+            if self._publish_button(DomeControl.TOUCH08):
+                self.status = "Sent TOUCH08"
+
+        elif event.button.name == "TOUCH09":
+            if self._publish_button(DomeControl.TOUCH09):
+                self.status = "Sent TOUCH09"
+
+        elif event.button.name == "TOUCH10":
+            if self._publish_button(DomeControl.TOUCH10):
+                self.status = "Sent TOUCH10"
+
+        elif event.button.name == "TOUCH11":
+            if self._publish_button(DomeControl.TOUCH11):
+                self.status = "Sent TOUCH11"
+
+        elif event.button.name == "TOUCH12":
+            if self._publish_button(DomeControl.TOUCH12):
+                self.status = "Sent TOUCH12"
+
+        # elif event.button.name == "LEFTPROX":
+        #     if self._publish_button(DomeControl.LEFTPROX):
+        #         self.status = "Sent LEFTPROX"
+
+        # elif event.button.name == "RIGHTPROX":
+        #     if self._publish_button(DomeControl.RIGHTPROX):
+        #         self.status = "Sent RIGHTPROX"
 
     def _reduce_text_until_fits(self, ctx, text, width_limit):
         extra_text = ""

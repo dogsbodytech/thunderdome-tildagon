@@ -33,6 +33,10 @@ Tildagon (2024): six buttons around the hexagonal perimeter, clockwise from top,
 | Joystick left  | joystick | `LEFT`       | `JOYSTICK_BUTTON_TYPES["LEFT"]`| —                 |
 | Joystick right | joystick | `RIGHT`      | `JOYSTICK_BUTTON_TYPES["RIGHT"]`| —                |
 | Joystick press | joystick | `CONFIRM`    | `JOYSTICK_BUTTON_TYPES["SELECT"]` (fire) | —       |
+| Touch strip 1–12 | touch  | —            | `event.button.name == "TOUCH01"`…`"TOUCH12"` | —  |
+| Proximity L/R  | proximity| —            | `event.button.name == "LEFTPROX"` / `"RIGHTPROX"` | — |
+
+Touch and proximity (Spaceagon only) emit `ButtonDownEvent`/`ButtonUpEvent` but their `Button`s have no `BUTTON_TYPES` parent — invisible to `Buttons.get(BUTTON_TYPES[...])` polling and to `BUTTON_TYPES[...] in event.button`; match `event.button.name` instead.
 
 Detect frontboard at runtime: `from frontboard.utils import detect_frontboard`. Specific source via `event.button.name` (e.g. `"FIRE"`).
 
@@ -44,7 +48,7 @@ if self.button_states.get(BUTTON_TYPES["CONFIRM"]):
     self.button_states.clear()              # clear or it re-triggers every update
 ```
 
-Event-based alternative: `eventbus.on(ButtonDownEvent, handler, self.app)` — always `eventbus.remove(...)` on minimise/close.
+Event-based alternative: `eventbus.on(ButtonDownEvent, handler, self)` — check which button with `BUTTON_TYPES["X"] in event.button`. Input events only reach the focused app (`InputEvent.requires_focus`), so handlers stay silent while minimised; the OS deregisters all handlers when an app closes. A handler that raises crashes the app.
 
 ### LEDs
 
