@@ -34,7 +34,6 @@ class ThunderdomeApp(app.App):
     def _connect_mqtt(self):
         try:
             self.client = MQTTClient("dogsbody", "test.mosquitto.org")
-            self.client.set_callback(self.on_message)
             self.client.connect()
             self.client.publish(TOPIC, b"hello from a sami badge")
             self.message = "Message sent"
@@ -54,10 +53,6 @@ class ThunderdomeApp(app.App):
         if self.message == "Starting...":
             if self._connect_wifi():
                 self._connect_mqtt()
-
-    def on_message(self, topic, msg):
-        self.message = msg.decode()
-        print("Message received:", self.message)
 
     def _reduce_text_until_fits(self, ctx, text, width_limit):
         extra_text = ""
