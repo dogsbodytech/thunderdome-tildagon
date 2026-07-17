@@ -4,9 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project state
 
-- `thunderdome-tildagon-app/` — Tildagon badge app (MicroPython) that publishes to MQTT. Symlinked into the simulator at `/Volumes/www/badge-2024-software/sim/apps/`.
-- `dome-mqtt-broker/` — empty directory, presumably intended to hold an MQTT broker component.
-- `Pipfile` — Pipenv config, Python 3.13.3, no packages declared yet.
+Publishable Tildagon app (see https://tildagon.badge.emfcamp.org/tildagon-apps/publish/). Runtime files live at the repo **root** — the app store requires `app.py` at the tarball's single root dir:
+
+- `app.py` — the app (MicroPython); exports `__app_export__`.
+- `tildagon.toml` — app-store metadata (name, category, author, license, url, description, version).
+- `metadata.json` — local/sim launcher metadata; the app store regenerates this on install and strips `tildagon.toml`.
+- `install-on-badge.py` — copies the runtime files to a connected badge via `mpremote`.
+
+Symlinked into the simulator at `/Volumes/www/badge-2024-software/sim/apps/`. `.gitattributes` keeps dev/tooling files (`.claude`, `.agents`, `CLAUDE.md`, `Pipfile*`, `skills-lock.json`) out of the badge/app-store download via `export-ignore`.
 
 ## Tildagon badge reference
 

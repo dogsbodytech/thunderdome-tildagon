@@ -1,0 +1,10 @@
+[app]
+name = "Thunderdome"
+category = "Games"
+
+[metadata]
+author = "dogsbody"
+license = "MIT"
+url = "https://github.com/dogsbody/thunderdome"
+description = "Control the Thunderdome! Dogsbody's geodesic dome with 5000 LEDs"
+version = "0.0.1"
