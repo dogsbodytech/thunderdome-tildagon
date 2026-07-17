@@ -6,7 +6,8 @@ from umqtt.simple import MQTTClient, MQTTException
 import wifi
 
 from app_components.tokens import line_height
-from events.input import Buttons, BUTTON_TYPES
+from events.input import BUTTON_TYPES, ButtonDownEvent
+from system.eventbus import eventbus
 
 # mqtt.emf.camp only allows anonymous publish under open/ (2026 policy)
 TOPIC_BASE = b"open/dogsbody/dome"
@@ -65,7 +66,9 @@ DOME_SEGMENTS = (
 
 class ThunderdomeApp(app.App):
     def __init__(self):
-        self.button_states = Buttons(self)
+        # Input events require focus (InputEvent.requires_focus), so this
+        # handler never fires while minimised — no remove/re-add needed.
+        eventbus.on(ButtonDownEvent, self._on_button_down, self)
         self.status = "Connecting"
         self.dome_colors = DOME_COLORS["classic"]
         self.client = None
@@ -127,33 +130,29 @@ class ThunderdomeApp(app.App):
                 if self._connect_wifi():
                     self._connect_mqtt()
 
-        if self.button_states.get(BUTTON_TYPES["UP"]):
-            self.button_states.clear()
+    def _on_button_down(self, event):
+        # MicroPython has no match/case; if/elif chain is the select
+        if BUTTON_TYPES["UP"] in event.button:
             if self._publish_button(DomeControl.UP):
                 self.status = "Sent UP"
 
-        elif self.button_states.get(BUTTON_TYPES["RIGHT"]):
-            self.button_states.clear()
+        elif BUTTON_TYPES["RIGHT"] in event.button:
             if self._publish_button(DomeControl.RIGHT):
                 self.status = "Sent RIGHT"
 
-        elif self.button_states.get(BUTTON_TYPES["CONFIRM"]):
-            self.button_states.clear()
+        elif BUTTON_TYPES["CONFIRM"] in event.button:
             if self._publish_button(DomeControl.CONFIRM):
                 self.status = "Sent CONFIRM"
 
-        elif self.button_states.get(BUTTON_TYPES["DOWN"]):
-            self.button_states.clear()
+        elif BUTTON_TYPES["DOWN"] in event.button:
             if self._publish_button(DomeControl.DOWN):
                 self.status = "Sent DOWN"
 
-        elif self.button_states.get(BUTTON_TYPES["LEFT"]):
-            self.button_states.clear()
+        elif BUTTON_TYPES["LEFT"] in event.button:
             if self._publish_button(DomeControl.LEFT):
                 self.status = "Sent LEFT"
 
-        elif self.button_states.get(BUTTON_TYPES["CANCEL"]):
-            self.button_states.clear()
+        elif BUTTON_TYPES["CANCEL"] in event.button:
             if self._publish_button(DomeControl.CANCEL):
                 self.status = "Sent CANCEL"
             self.minimise()
