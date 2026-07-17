@@ -5,6 +5,6 @@ category = "Games"
 [metadata]
 author = "dogsbody"
 license = "MIT"
-url = "https://github.com/dogsbody/thunderdome"
+url = "https://github.com/dogsbodytech/thunderdome-tildagon"
 description = "Control the Thunderdome! Dogsbody's geodesic dome with 5000 LEDs"
 version = "0.0.1"
