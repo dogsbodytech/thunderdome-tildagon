@@ -1,4 +1,4 @@
 #!/bin/sh
-mpremote mkdir apps/dome
-mpremote cp apps/dome/* :apps/dome/
+mpremote mkdir apps/thunderdome
+mpremote cp ./* :apps/thunderdome/
 mpremote reset
