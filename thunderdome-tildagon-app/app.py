@@ -11,16 +11,30 @@ from events.input import Buttons, BUTTON_TYPES
 # mqtt.emf.camp only allows anonymous publish under open/ (2026 policy)
 TOPIC_BASE = b"open/dogsbody/dome"
 
-# BUTTON_TYPES is universal: Spaceagon joystick maps into the same names
-BUTTON_NAMES = ["UP", "RIGHT", "CONFIRM", "DOWN", "LEFT", "CANCEL"]
 
-IDLE_AFTER_MS = 3000
+# MicroPython has no enum module, so a constants class is the badge-safe
+# equivalent of an Enum/Select. Values double as MQTT topic leaf names.
+class DomeControl:
+    UP = "UP"
+    RIGHT = "RIGHT"
+    CONFIRM = "CONFIRM"
+    DOWN = "DOWN"
+    LEFT = "LEFT"
+    CANCEL = "CANCEL"
+
+
+# One colour per strut class, index-matched to DOME_SEGMENTS.
+DOME_COLORS = {
+    "classic": ((1.0, 0.2, 0.2), (0.25, 0.4, 1.0)),
+    "ember": ((1.0, 0.6, 0.1), (0.9, 0.2, 0.1)),
+    "mono": ((1.0, 1.0, 1.0), (0.55, 0.55, 0.55)),
+}
 
 # 2V geodesic hemisphere wireframe, precomputed from dome/Assembly.drawio.svg
-# geometry (2V = 2 strut classes, so red/blue only; source 3V had a third).
-# Coordinates are screen-space, centred on (0, 0), for the 240x240 display.
+# geometry (2V = 2 strut classes; source 3V had a third). One tuple of
+# segments per strut class. Screen-space coords centred on (0, 0), 240x240.
 DOME_SEGMENTS = (
-    ((1.0, 0.2, 0.2), (
+    (
         (-25, -46, 26, -40), (-69, -31, -40, -61), (15, -37, 26, 10),
         (26, -40, 65, -37), (26, -40, 56, 1), (-40, -43, 0, -65),
         (-69, 0, -40, -43), (-81, -23, -69, -31), (0, -4, 26, -40),
@@ -31,8 +45,8 @@ DOME_SEGMENTS = (
         (85, -15, 90, 16), (15, -67, 26, -40), (0, 54, 26, 10),
         (0, -65, 50, -52), (-69, -31, -56, 1), (-69, 0, -25, 1),
         (85, -15, 90, 34), (-69, 0, -56, 49), (-40, -61, 0, -65),
-    )),
-    ((0.25, 0.4, 1.0), (
+    ),
+    (
         (-25, -46, 0, -4), (50, -52, 65, -8), (-90, 34, -56, 49),
         (-25, 1, 0, 54), (-56, 1, 0, -4), (-90, 34, -81, -23),
         (-40, -43, -25, 1), (-25, 1, 15, -37), (-56, 1, -25, -46),
@@ -45,33 +59,32 @@ DOME_SEGMENTS = (
         (15, -67, 65, -37), (-40, -61, -25, -46), (56, 49, 90, 34),
         (-56, 49, -25, 1), (-56, 49, 0, 54), (65, -8, 90, 34),
         (-40, -43, -40, -61), (-81, -23, -40, -61),
-    )),
+    ),
 )
+
 
 class ThunderdomeApp(app.App):
     def __init__(self):
         self.button_states = Buttons(self)
-        self.message = "Starting..."
+        self.status = "Connecting"
+        self.dome_colors = DOME_COLORS["classic"]
         self.client = None
         self.retry_ms = 0
-        self.idle_ms = 0
 
     def _connect_wifi(self):
         try:
             if wifi.status():
-                self.message = "WiFi OK"
                 return True
 
             wifi.disconnect()
             wifi.connect()
             if wifi.wait():
-                self.message = "WiFi OK"
                 return True
 
-            self.message = "WiFi failed"
+            self.status = "WiFi failed"
             return False
         except OSError as e:
-            self.message = f"WiFi error: {e}"
+            self.status = f"WiFi error: {e}"
             return False
 
     def _connect_mqtt(self):
@@ -81,32 +94,32 @@ class ThunderdomeApp(app.App):
             client_id = b"dogsbody-" + binascii.hexlify(unique)
             self.client = MQTTClient(client_id, "mqtt.emf.camp")
             self.client.connect()
-            self.message = "Connected"
+            self.status = "Connected"
             return True
         except (OSError, MQTTException) as e:
-            self.message = f"MQTT error: {e}"
+            self.status = f"MQTT error: {e}"
             self.client = None
             return False
 
     def _publish_button(self, name):
+        # Sets self.status on failure, returns True on success so the
+        # caller can set its own per-button status text.
         # ponytail: QoS 0 — a press can be lost if the broker dropped an
         # idle connection; one reconnect+retry covers the common case
         topic = TOPIC_BASE + b"/" + name.encode()
         for _ in range(2):
             if self.client is None:
                 if not (self._connect_wifi() and self._connect_mqtt()):
-                    return
+                    return False
             try:
                 self.client.publish(topic, b"pressed")
-                self.message = f"Sent {name}"
-                return
+                return True
             except (OSError, MQTTException) as e:
-                self.message = f"MQTT error: {e}"
+                self.status = f"MQTT error: {e}"
                 self.client = None
+        return False
 
     def update(self, delta):
-        self.idle_ms += delta
-
         if self.client is None:
             self.retry_ms -= delta
             if self.retry_ms <= 0:
@@ -114,14 +127,36 @@ class ThunderdomeApp(app.App):
                 if self._connect_wifi():
                     self._connect_mqtt()
 
-        for name in BUTTON_NAMES:
-            if self.button_states.get(BUTTON_TYPES[name]):
-                self.button_states.clear()
-                self.idle_ms = 0
-                self._publish_button(name)
-                if name == "CANCEL":
-                    self.minimise()
-                break
+        if self.button_states.get(BUTTON_TYPES["UP"]):
+            self.button_states.clear()
+            if self._publish_button(DomeControl.UP):
+                self.status = "Sent UP"
+
+        elif self.button_states.get(BUTTON_TYPES["RIGHT"]):
+            self.button_states.clear()
+            if self._publish_button(DomeControl.RIGHT):
+                self.status = "Sent RIGHT"
+
+        elif self.button_states.get(BUTTON_TYPES["CONFIRM"]):
+            self.button_states.clear()
+            if self._publish_button(DomeControl.CONFIRM):
+                self.status = "Sent CONFIRM"
+
+        elif self.button_states.get(BUTTON_TYPES["DOWN"]):
+            self.button_states.clear()
+            if self._publish_button(DomeControl.DOWN):
+                self.status = "Sent DOWN"
+
+        elif self.button_states.get(BUTTON_TYPES["LEFT"]):
+            self.button_states.clear()
+            if self._publish_button(DomeControl.LEFT):
+                self.status = "Sent LEFT"
+
+        elif self.button_states.get(BUTTON_TYPES["CANCEL"]):
+            self.button_states.clear()
+            if self._publish_button(DomeControl.CANCEL):
+                self.status = "Sent CANCEL"
+            self.minimise()
 
     def _reduce_text_until_fits(self, ctx, text, width_limit):
         extra_text = ""
@@ -147,7 +182,7 @@ class ThunderdomeApp(app.App):
 
     def _draw_dome(self, ctx):
         ctx.line_width = 2
-        for color, segs in DOME_SEGMENTS:
+        for color, segs in zip(self.dome_colors, DOME_SEGMENTS):
             ctx.rgb(*color)
             ctx.begin_path()
             for x1, y1, x2, y2 in segs:
@@ -159,24 +194,15 @@ class ThunderdomeApp(app.App):
         ctx.save()
         ctx.rgb(0.2, 0, 0).rectangle(-120, -120, 240, 240).fill()
 
-        if self.idle_ms > IDLE_AFTER_MS:
-            self._draw_dome(ctx)
-            ctx.restore()
-            return
+        self._draw_dome(ctx)
 
         ctx.rgb(1, 1, 1)
-
-        text = f"Message: {self.message}"
-        width_limit = 200  # 240px screen minus margins
-        lines = self._wrap_text(ctx, text, width_limit)
-
         spacing = line_height * 16  # scale to your font size
-        start_y = -((len(lines) - 1) * spacing) / 2
-
-        for i, line in enumerate(lines):
-            y = start_y + i * spacing
+        y = 82  # below the dome; round screen narrows here
+        for line in self._wrap_text(ctx, self.status, 140):
             line_width = ctx.text_width(line)
             ctx.move_to(-line_width / 2, y).text(line)
+            y += spacing
 
         ctx.restore()
 
