@@ -2,20 +2,24 @@ import binascii
 import machine
 
 import app
-from umqtt.simple import MQTTClient
+from umqtt.simple import MQTTClient, MQTTException
 import wifi
 
 from app_components.tokens import line_height
 from events.input import Buttons, BUTTON_TYPES
 
 # mqtt.emf.camp only allows anonymous publish under open/ (2026 policy)
-TOPIC = b"open/dogsbody/dome"
+TOPIC_BASE = b"open/dogsbody/dome"
+
+# BUTTON_TYPES is universal: Spaceagon joystick maps into the same names
+BUTTON_NAMES = ["UP", "RIGHT", "CONFIRM", "DOWN", "LEFT", "CANCEL"]
 
 class ThunderdomeApp(app.App):
     def __init__(self):
         self.button_states = Buttons(self)
         self.message = "Starting..."
         self.client = None
+        self.retry_ms = 0
 
     def _connect_wifi(self):
         try:
@@ -42,24 +46,44 @@ class ThunderdomeApp(app.App):
             client_id = b"dogsbody-" + binascii.hexlify(unique)
             self.client = MQTTClient(client_id, "mqtt.emf.camp")
             self.client.connect()
-            self.client.publish(TOPIC, b"hello from a sami badge")
-            self.message = "Message sent"
-            self.client.disconnect()
+            self.message = "Connected"
             return True
-        except OSError as e:
+        except (OSError, MQTTException) as e:
             self.message = f"MQTT error: {e}"
             self.client = None
             return False
 
-    def update(self, delta):
-        if self.button_states.get(BUTTON_TYPES["CANCEL"]):
-            self.button_states.clear()
-            self.minimise()
-            return
+    def _publish_button(self, name):
+        # ponytail: QoS 0 — a press can be lost if the broker dropped an
+        # idle connection; one reconnect+retry covers the common case
+        topic = TOPIC_BASE + b"/" + name.encode()
+        for _ in range(2):
+            if self.client is None:
+                if not (self._connect_wifi() and self._connect_mqtt()):
+                    return
+            try:
+                self.client.publish(topic, b"pressed")
+                self.message = f"Sent {name}"
+                return
+            except (OSError, MQTTException) as e:
+                self.message = f"MQTT error: {e}"
+                self.client = None
 
-        if self.message == "Starting...":
-            if self._connect_wifi():
-                self._connect_mqtt()
+    def update(self, delta):
+        if self.client is None:
+            self.retry_ms -= delta
+            if self.retry_ms <= 0:
+                self.retry_ms = 5000
+                if self._connect_wifi():
+                    self._connect_mqtt()
+
+        for name in BUTTON_NAMES:
+            if self.button_states.get(BUTTON_TYPES[name]):
+                self.button_states.clear()
+                self._publish_button(name)
+                if name == "CANCEL":
+                    self.minimise()
+                break
 
     def _reduce_text_until_fits(self, ctx, text, width_limit):
         extra_text = ""
