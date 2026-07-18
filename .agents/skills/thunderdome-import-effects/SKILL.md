@@ -1,5 +1,5 @@
 ---
-name: import-effects
+name: thunderdome-import-effects
 description: Sync dome effects from the thunderdome controller repo into the badge effects/ folder. Use when asked to import, sync, add, or check for new dome effects, or after the controller's effect catalogue changes. Only adds effects that don't exist yet — never overwrites.
 ---
 
