@@ -24,21 +24,26 @@ The effect `VALUE`s mirror the dome controller's effect files at `dogsbodytech/t
 Menu items are **auto-discovered** from `effects/` — one file per item, no registry to edit. To add one, drop `effects/<name>.py` defining `NAME`, `VALUE`, and `draw(ctx)`:
 
 ```python
-from ..dome import draw_dome  # also DOME_TOP, DOME_BOTTOM for height gradients
+from ..dome import classify_segments, draw_dome_groups, DOME_TOP, DOME_BOTTOM
 
 NAME = "Height Wave"     # label shown in the menu
 VALUE = "height_wave"    # effect name; CONFIRM publishes it to .../thunderdome/effect
 
-def draw(ctx):     # the dome graphic; color_fn returns (r,g,b) 0–1 per segment
-    band = (DOME_TOP + DOME_BOTTOM) / 2
-    def color(x1, y1, x2, y2):
-        my = (y1 + y2) / 2
-        return (0.2, 1.0, 0.4) if abs(my - band) <= 14 else (0.0, 0.1, 0.05)
-    draw_dome(ctx, color)
+_BAND_Y = (DOME_TOP + DOME_BOTTOM) / 2
+
+def _color(x1, y1, x2, y2):   # returns (r,g,b) 0–1 per segment
+    my = (y1 + y2) / 2
+    return (0.2, 1.0, 0.4) if abs(my - _BAND_Y) <= 14 else (0.0, 0.1, 0.05)
+
+_GROUPS = classify_segments(_color)   # once, at import — previews are static
+
+def draw(ctx):     # the dome graphic
+    draw_dome_groups(ctx, _GROUPS)
 ```
 
 - `effects/__init__.py` imports every `.py` (except `__init__.py`), **sorted by filename** → that's the menu order. Never edit it to register a file.
-- `draw_dome(ctx, color_fn)` strokes the wireframe; `color_fn(x1, y1, x2, y2)` is called per segment. Uniform colour = ignore the args and return a constant. Y grows **downward** (top ≈ `DOME_TOP` −67, bottom ≈ `DOME_BOTTOM` +54).
+- `classify_segments(color_fn)` buckets the 64 wireframe segments by colour (calling `color_fn(x1, y1, x2, y2)` once each); `draw_dome_groups(ctx, groups)` strokes one batched path per colour. Precompute the groups at import as above — classifying per frame wastes ESP32 time on a static preview. Uniform colour = ignore the args and return a constant. Y grows **downward** (top ≈ `DOME_TOP` −67, bottom ≈ `DOME_BOTTOM` +54).
+- `draw_dome(ctx, color_fn)` still exists for colours that change per frame — it classifies on every call.
 - No install step: `install-on-badge.py` copies the whole tree, so new effect files ship automatically.
 - Empty `effects/` divides by zero (`% len(EFFECTS)`) — keep at least one file.
 

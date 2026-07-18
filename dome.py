@@ -38,11 +38,32 @@ DOME_SEGMENTS = (
 )
 
 
+def classify_segments(color_fn):
+    """Bucket the wireframe segments by colour, calling
+    color_fn(x1, y1, x2, y2) -> (r, g, b) once per segment. Returns a list of
+    (color, segments) groups, dimmest first so bright struts stroke on top.
+    Static previews should call this once at import and hand the result to
+    draw_dome_groups(); only recompute when the colours actually change."""
+    groups = {}
+    for segs in DOME_SEGMENTS:
+        for seg in segs:
+            groups.setdefault(color_fn(*seg), []).append(seg)
+    return sorted(groups.items(), key=lambda g: sum(g[0]))
+
+
+def draw_dome_groups(ctx, groups):
+    """Stroke pre-classified segment groups, one batched path per colour."""
+    ctx.line_width = 2
+    for color, segs in groups:
+        ctx.rgb(*color).begin_path()
+        for x1, y1, x2, y2 in segs:
+            ctx.move_to(x1, y1).line_to(x2, y2)
+        ctx.stroke()
+
+
 def draw_dome(ctx, color_fn):
     """Stroke the dome wireframe, colouring each segment via
-    color_fn(x1, y1, x2, y2) -> (r, g, b) with floats 0.0-1.0."""
-    ctx.line_width = 2
-    for segs in DOME_SEGMENTS:
-        for x1, y1, x2, y2 in segs:
-            ctx.rgb(*color_fn(x1, y1, x2, y2)).begin_path()
-            ctx.move_to(x1, y1).line_to(x2, y2).stroke()
+    color_fn(x1, y1, x2, y2) -> (r, g, b) with floats 0.0-1.0. Classifies
+    every frame — fine for animated colours; static previews should
+    precompute with classify_segments() instead."""
+    draw_dome_groups(ctx, classify_segments(color_fn))
