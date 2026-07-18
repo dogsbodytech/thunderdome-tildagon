@@ -17,20 +17,23 @@ Symlinked into the simulator at `/Volumes/www/badge-2024-software/sim/apps/`. `.
 
 ### Adding an effect
 
-The app is an effect picker: UP/DOWN scroll a built-in `Menu`, CONFIRM publishes the focused effect's `VALUE` to `open/dogsbody/dome/effect`, that effect's dome preview draws as a backdrop, and one perimeter LED marks the scroll position. Touch petals (`TOUCH01–12`) publish `pressed` to `open/dogsbody/dome/TOUCHxx` directly, independent of the menu.
+The app is an effect picker: UP/DOWN scroll a built-in `Menu`, CONFIRM publishes `pressed` to `open/dogsbody/dome/<VALUE>` (same topic shape as the buttons/touch petals — `VALUE` is the topic leaf), that effect's dome preview draws as a backdrop, and one perimeter LED marks the scroll position. Touch petals (`TOUCH01–12`) publish `pressed` to `open/dogsbody/dome/TOUCHxx` directly, independent of the menu.
+
+The effect `VALUE`s mirror the dome controller's effect files at `dogsbodytech/thunderdome` → `3d-controller/controller/thunderdome/effects/` (one badge module per non-procedural effect file, keyed by its stem: `clock_hand`, `expanding_rings`, `height_wave`). If the dome dispatches on hyphens instead, change each `VALUE` (one line).
 
 Menu items are **auto-discovered** from `effects/` — one file per item, no registry to edit. To add one, drop `effects/<name>.py` defining `NAME`, `VALUE`, and `draw(ctx)`:
 
 ```python
 from ..dome import draw_dome  # also DOME_TOP, DOME_BOTTOM for height gradients
 
-NAME = "Fire"      # label shown in the menu
-VALUE = "fire"     # string published over MQTT on CONFIRM
+NAME = "Height Wave"     # label shown in the menu
+VALUE = "height_wave"    # topic leaf; CONFIRM publishes "pressed" there
 
 def draw(ctx):     # the dome graphic; color_fn returns (r,g,b) 0–1 per segment
+    band = (DOME_TOP + DOME_BOTTOM) / 2
     def color(x1, y1, x2, y2):
-        t = ((y1 + y2) / 2 - DOME_TOP) / (DOME_BOTTOM - DOME_TOP)  # 0 top..1 bottom
-        return (1.0, 1.0 - t, 0.0)                                 # yellow→red
+        my = (y1 + y2) / 2
+        return (0.2, 1.0, 0.4) if abs(my - band) <= 14 else (0.0, 0.1, 0.05)
     draw_dome(ctx, color)
 ```
 

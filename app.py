@@ -73,8 +73,10 @@ class ThunderdomeApp(app.App):
         return False
 
     def _select(self, item, idx):
+        # Same topic shape as the buttons/touch petals: the effect's VALUE is
+        # the topic leaf, published "pressed".
         effect = EFFECTS[idx % len(EFFECTS)]
-        ok = self._publish(TOPIC_BASE + b"/effect", effect.VALUE.encode())
+        ok = self._publish(TOPIC_BASE + b"/" + effect.VALUE.encode(), b"pressed")
         self.notification = Notification(
             'Sent "%s"' % effect.NAME if ok else "Not connected"
         )
