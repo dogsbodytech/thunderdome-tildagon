@@ -6,24 +6,7 @@ Control the Thunderdome — Dogsbody's geodesic dome with 5000 LEDs — from you
 
 ## About
 
-Thunderdome is a [Tildagon](https://tildagon.badge.emfcamp.org/) badge app. Press a
-button, joystick direction or touch pad and it publishes over MQTT to
-`mqtt.emf.camp`, driving the dome's lights. 
-
-## Features
-
-- Six perimeter buttons, plus Spaceagon joystick and 12-pad touch strip.
-- Publishes to `open/dogsbody/dome/<CONTROL>` (payload `pressed`) — anonymous, no login.
-- Auto-connects Wi-Fi + MQTT, with reconnect/retry so a dropped press isn't silently lost.
-- On-screen 2V geodesic wireframe render.
-
-## Controls
-
-| Input | Sends |
-|-------|-------|
-| Buttons (A–F) | `UP` `RIGHT` `CONFIRM` `DOWN` `LEFT` `CANCEL` |
-| Touch strip (Spaceagon) | `TOUCH01`–`TOUCH12` |
-| `CANCEL` / Button F | also minimises the app |
+Thunderdome is a [Tildagon](https://tildagon.badge.emfcamp.org/) badge app so anyone can control the Thunderdome!
 
 ## Installation
 
@@ -38,7 +21,7 @@ Or copy it straight to a connected badge with [`mpremote`](https://docs.micropyt
 ### Requirements
 
 - A Tildagon (2024) or Spaceagon (2026) badge.
-- Wi-Fi configured on the badge (for MQTT).
+- Emfcamp Wi-Fi configured on the badge (for MQTT).
 
 ## Development
 
@@ -49,9 +32,10 @@ Symlink this repo into the sim's `apps/` directory and launch the sim:
 ln -s /path/to/thunderdome /path/to/badge-2024-software/sim/apps/thunderdome
 ```
 
-Runtime files live at the repo root (`app.py`, `__init__.py`, `metadata.json`);
-`tildagon.toml` carries the app-store metadata. Dev/tooling files are kept out of
-the badge download via `.gitattributes` (`export-ignore`).
+Runtime files live at the repo root (`app.py`, `dome.py`, `effects/`,
+`__init__.py`, `metadata.json`); `tildagon.toml` carries the app-store metadata.
+Dev/tooling files are kept out of the badge download via `.gitattributes`
+(`export-ignore`).
 
 ## Publishing
 

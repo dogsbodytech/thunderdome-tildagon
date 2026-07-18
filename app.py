@@ -1,9 +1,11 @@
+import asyncio
 import binascii
 import json
 import machine
 
 import app
-from umqtt.simple import MQTTClient, MQTTException
+from async_helpers import unblock
+from umqtt.simple import MQTTClient
 import wifi
 
 from app_components import Menu, Notification, clear_background
@@ -43,7 +45,7 @@ SPACE_BODIES = [
 class ThunderdomeApp(app.App):
     def __init__(self):
         self.client = None
-        self.retry_ms = 0
+        self._outbox = []  # queued (topic, payload, label) for background_task
         self.notification = None
         self._led_pos = -1  # forces the LED ring to draw on the first update
         self.menu = None
@@ -96,6 +98,11 @@ class ThunderdomeApp(app.App):
         self._swap_menu(None)
 
     # --- connectivity ----------------------------------------------------
+    # Everything here blocks on sockets: wifi.wait() spins for up to ~20s
+    # and umqtt's connect()/publish() have no timeout. The badge runs
+    # rendering, input and every app on one asyncio loop, so these must only
+    # run on the worker thread background_task() spawns via unblock() —
+    # never directly on the loop.
 
     def _connect_wifi(self):
         try:
@@ -104,8 +111,20 @@ class ThunderdomeApp(app.App):
             wifi.disconnect()
             wifi.connect()
             return bool(wifi.wait())
-        except OSError:
+        except Exception:
             return False
+
+    def _drop_client(self):
+        client, self.client = self.client, None
+        if client is None:
+            return
+        try:
+            client.disconnect()  # the only umqtt call that closes the socket
+        except Exception:
+            try:
+                client.sock.close()
+            except Exception:
+                pass
 
     def _connect_mqtt(self):
         try:
@@ -114,9 +133,15 @@ class ThunderdomeApp(app.App):
             client_id = b"dogsbody-" + binascii.hexlify(unique)
             self.client = MQTTClient(client_id, "mqtt.emf.camp")
             self.client.connect()
+            # Bound how long a dead broker can stall the worker thread.
+            settimeout = getattr(self.client.sock, "settimeout", None)
+            if settimeout:
+                settimeout(10)
             return True
-        except (OSError, MQTTException):
-            self.client = None
+        except Exception:
+            # umqtt raises more than OSError on a malformed CONNACK
+            # (IndexError, AssertionError, ...) — catch everything.
+            self._drop_client()
             return False
 
     def _publish(self, topic, payload):
@@ -129,8 +154,8 @@ class ThunderdomeApp(app.App):
             try:
                 self.client.publish(topic, payload)
                 return True
-            except (OSError, MQTTException):
-                self.client = None
+            except Exception:
+                self._drop_client()
         return False
 
     # --- selection -------------------------------------------------------
@@ -138,10 +163,9 @@ class ThunderdomeApp(app.App):
     def _send_effect(self, value, label):
         # Payload is a JSON dict so params/brightness/colour can ride along later.
         payload = json.dumps({"name": value}).encode()
-        ok = self._publish(TOPIC_BASE + b"/effect", payload)
-        self.notification = Notification(
-            'Sent "%s"' % label if ok else "Not connected"
-        )
+        self._outbox.append((TOPIC_BASE + b"/effect", payload, label))
+        # Immediate feedback; background_task replaces this with the result.
+        self.notification = Notification("Sending...")
 
     def _select_effect(self, item, idx):
         effect = EFFECTS[idx % len(EFFECTS)]
@@ -190,20 +214,34 @@ class ThunderdomeApp(app.App):
         if self.notification:
             self.notification.update(delta)
 
-        if self.client is None:
-            self.retry_ms -= delta
-            if self.retry_ms <= 0:
-                self.retry_ms = 5000
-                # Never block the frame loop: wifi.connect()/wait() can stall
-                # for seconds, so only pre-connect MQTT when WiFi is already
-                # up. _publish() still does the full blocking connect on the
-                # user-initiated path.
-                try:
-                    up = wifi.status()
-                except OSError:
-                    up = False
-                if up:
-                    self._connect_mqtt()
+    async def background_task(self):
+        # All network I/O lives here, handed to a real _thread by unblock()
+        # so the shared asyncio loop never stalls. One await at a time, so
+        # only one worker thread ever touches self.client.
+        async def idle():
+            pass
+
+        retry_ms = 0
+        while True:
+            if self._outbox:
+                topic, payload, label = self._outbox.pop(0)
+                ok = await unblock(self._publish, idle, topic, payload)
+                self.notification = Notification(
+                    'Sent "%s"' % label if ok else "Not connected"
+                )
+            elif self.client is None:
+                retry_ms -= 50
+                if retry_ms <= 0:
+                    retry_ms = 5000
+                    # Pre-connect when WiFi is already up so the first
+                    # CONFIRM doesn't pay the MQTT connect cost.
+                    try:
+                        up = wifi.status()
+                    except Exception:
+                        up = False
+                    if up:
+                        await unblock(self._connect_mqtt, idle)
+            await asyncio.sleep(0.05)
 
     def _draw_spaceagon(self, ctx):
         ctx.save()
