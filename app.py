@@ -46,7 +46,10 @@ SPACE_BODIES = [
 class ThunderdomeApp(app.App):
     def __init__(self):
         self.client = None
-        self._outbox = []  # queued (topic, payload, label) for background_task
+        # Latest unsent (topic, payload, label). A single slot, not a queue:
+        # a new send overwrites an unsent one, so rapid taps publish at most
+        # the in-flight message plus the newest tap.
+        self._pending = None
         self.notification = None
         self._led_pos = -1  # forces the LED ring to draw on the first update
         self.menu = None
@@ -164,7 +167,7 @@ class ThunderdomeApp(app.App):
     def _send_effect(self, value, label):
         # Payload is a JSON dict so params/brightness/colour can ride along later.
         payload = json.dumps({"name": value}).encode()
-        self._outbox.append((TOPIC_BASE + b"/effect", payload, label))
+        self._pending = (TOPIC_BASE + b"/effect", payload, label)
         # Immediate feedback; background_task replaces this with the result.
         self.notification = Notification("Sending...")
 
@@ -224,12 +227,17 @@ class ThunderdomeApp(app.App):
 
         retry_ms = 0
         while True:
-            if self._outbox:
-                topic, payload, label = self._outbox.pop(0)
+            if self._pending is not None:
+                topic, payload, label = self._pending
+                self._pending = None
                 ok = await unblock(self._publish, idle, topic, payload)
-                self.notification = Notification(
-                    'Sent "%s"' % label if ok else "Not connected"
-                )
+                # If a newer tap arrived while this was in flight, stay on
+                # its "Sending..." notification instead of flashing a stale
+                # result.
+                if self._pending is None:
+                    self.notification = Notification(
+                        'Sent "%s"' % label if ok else "Not connected"
+                    )
             elif self.client is None:
                 retry_ms -= 50
                 if retry_ms <= 0:
