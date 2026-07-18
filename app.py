@@ -1,4 +1,5 @@
 import binascii
+import json
 import machine
 
 import app
@@ -67,9 +68,10 @@ class ThunderdomeApp(app.App):
         return False
 
     def _select(self, item, idx):
-        # Effect goes to <base>/effect with the effect name as the payload.
+        # Payload is a JSON dict so params/brightness/colour can ride along later.
         effect = EFFECTS[idx % len(EFFECTS)]
-        ok = self._publish(TOPIC_BASE + b"/effect", effect.VALUE.encode())
+        payload = json.dumps({"name": effect.VALUE}).encode()
+        ok = self._publish(TOPIC_BASE + b"/effect", payload)
         self.notification = Notification(
             'Sent "%s"' % effect.NAME if ok else "Not connected"
         )
