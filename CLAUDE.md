@@ -6,12 +6,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Publishable Tildagon app (see https://tildagon.badge.emfcamp.org/tildagon-apps/publish/). Runtime files live at the repo **root** — the app store requires `app.py` at the tarball's single root dir:
 
-- `app.py` — the app (MicroPython); exports `__app_export__`.
+- `app.py` — the app (MicroPython); exports `__app_export__`. Effect-picker menu + touch passthrough + MQTT.
+- `dome.py` — shared wireframe geometry (`DOME_SEGMENTS`, `DOME_TOP`/`DOME_BOTTOM`) + `draw_dome(ctx, color_fn)`.
+- `effects/` — one module per menu item, auto-discovered (see **Adding an effect**).
 - `tildagon.toml` — app-store metadata (name, category, author, license, url, description, version).
 - `metadata.json` — local/sim launcher metadata; the app store regenerates this on install and strips `tildagon.toml`.
-- `install-on-badge.py` — copies the runtime files to a connected badge via `mpremote`.
+- `install-on-badge.py` — copies the whole tree (minus `__pycache__`/`.git`) to a connected badge via `mpremote`.
 
 Symlinked into the simulator at `/Volumes/www/badge-2024-software/sim/apps/`. `.gitattributes` keeps dev/tooling files (`.claude`, `.agents`, `CLAUDE.md`, `Pipfile*`, `skills-lock.json`) out of the badge/app-store download via `export-ignore`.
+
+### Adding an effect
+
+The app is an effect picker: UP/DOWN scroll a built-in `Menu`, CONFIRM publishes the focused effect's `VALUE` to `open/dogsbody/dome/effect`, that effect's dome preview draws as a backdrop, and one perimeter LED marks the scroll position. Touch petals (`TOUCH01–12`) publish `pressed` to `open/dogsbody/dome/TOUCHxx` directly, independent of the menu.
+
+Menu items are **auto-discovered** from `effects/` — one file per item, no registry to edit. To add one, drop `effects/<name>.py` defining `NAME`, `VALUE`, and `draw(ctx)`:
+
+```python
+from ..dome import draw_dome  # also DOME_TOP, DOME_BOTTOM for height gradients
+
+NAME = "Fire"      # label shown in the menu
+VALUE = "fire"     # string published over MQTT on CONFIRM
+
+def draw(ctx):     # the dome graphic; color_fn returns (r,g,b) 0–1 per segment
+    def color(x1, y1, x2, y2):
+        t = ((y1 + y2) / 2 - DOME_TOP) / (DOME_BOTTOM - DOME_TOP)  # 0 top..1 bottom
+        return (1.0, 1.0 - t, 0.0)                                 # yellow→red
+    draw_dome(ctx, color)
+```
+
+- `effects/__init__.py` imports every `.py` (except `__init__.py`), **sorted by filename** → that's the menu order. Never edit it to register a file.
+- `draw_dome(ctx, color_fn)` strokes the wireframe; `color_fn(x1, y1, x2, y2)` is called per segment. Uniform colour = ignore the args and return a constant. Y grows **downward** (top ≈ `DOME_TOP` −67, bottom ≈ `DOME_BOTTOM` +54).
+- No install step: `install-on-badge.py` copies the whole tree, so new effect files ship automatically.
+- Empty `effects/` divides by zero (`% len(EFFECTS)`) — keep at least one file.
 
 ## Tildagon badge reference
 
