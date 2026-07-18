@@ -194,7 +194,15 @@ class ThunderdomeApp(app.App):
             self.retry_ms -= delta
             if self.retry_ms <= 0:
                 self.retry_ms = 5000
-                if self._connect_wifi():
+                # Never block the frame loop: wifi.connect()/wait() can stall
+                # for seconds, so only pre-connect MQTT when WiFi is already
+                # up. _publish() still does the full blocking connect on the
+                # user-initiated path.
+                try:
+                    up = wifi.status()
+                except OSError:
+                    up = False
+                if up:
                     self._connect_mqtt()
 
     def _draw_spaceagon(self, ctx):
