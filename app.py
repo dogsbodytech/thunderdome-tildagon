@@ -6,14 +6,12 @@ from umqtt.simple import MQTTClient, MQTTException
 import wifi
 
 from app_components import Menu, Notification, clear_background
-from events.input import ButtonDownEvent
-from system.eventbus import eventbus
 from tildagonos import tildagonos
 
 from .effects import EFFECTS
 
 # mqtt.emf.camp only allows anonymous publish under open/ (2026 policy)
-TOPIC_BASE = b"open/dogsbody/dome"
+TOPIC_BASE = b"open/dogsbody/thunderdome"
 
 
 class ThunderdomeApp(app.App):
@@ -30,10 +28,6 @@ class ThunderdomeApp(app.App):
             select_handler=self._select,
             back_handler=self.minimise,
         )
-        # Touch petals have no BUTTON_TYPES parent, so the Menu never sees
-        # them — this handler passes TOUCH01-12 straight through to MQTT.
-        # Input events require focus, so it stays quiet while minimised.
-        eventbus.on(ButtonDownEvent, self._on_button_down, self)
         tildagonos.set_led_power(True)
 
     def _connect_wifi(self):
@@ -73,20 +67,12 @@ class ThunderdomeApp(app.App):
         return False
 
     def _select(self, item, idx):
-        # Same topic shape as the buttons/touch petals: the effect's VALUE is
-        # the topic leaf, published "pressed".
+        # Effect goes to <base>/effect with the effect name as the payload.
         effect = EFFECTS[idx % len(EFFECTS)]
-        ok = self._publish(TOPIC_BASE + b"/" + effect.VALUE.encode(), b"pressed")
+        ok = self._publish(TOPIC_BASE + b"/effect", effect.VALUE.encode())
         self.notification = Notification(
             'Sent "%s"' % effect.NAME if ok else "Not connected"
         )
-
-    def _on_button_down(self, event):
-        # Touch petals only; d-pad/confirm/cancel belong to the Menu.
-        name = event.button.name
-        if name and name.startswith("TOUCH"):
-            ok = self._publish(TOPIC_BASE + b"/" + name.encode(), b"pressed")
-            self.notification = Notification(name if ok else "Not connected")
 
     def _update_leds(self, idx):
         # One lit perimeter LED marks the scroll position (indices 1-12).

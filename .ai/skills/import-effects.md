@@ -60,11 +60,11 @@ Each `effects/<stem>.py` must define exactly:
 
 - `NAME` — menu label. Derive as `stem.replace("_", " ").title()` unless the
   source suggests a better human name.
-- `VALUE` — the MQTT topic leaf. Use the **file stem verbatim** (e.g.
-  `clock_hand`). CONFIRM publishes `pressed` to `open/dogsbody/dome/<VALUE>`,
-  the same shape as the buttons/touch petals — so the dome must have a matching
-  per-effect handler. (If the dome ever dispatches on hyphens instead of
-  underscores, change `VALUE` only — one line.)
+- `VALUE` — the effect name. Use the **file stem verbatim** (e.g.
+  `clock_hand`). CONFIRM publishes it as the **payload** to
+  `open/dogsbody/thunderdome/effect`, so the dome must recognise this name.
+  (If the dome ever dispatches on hyphens instead of underscores, change
+  `VALUE` only — one line.)
 - `draw(ctx)` — a static 2D preview of the effect, drawn as the menu backdrop.
 
 ### Preview guidance

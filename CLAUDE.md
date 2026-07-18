@@ -17,7 +17,7 @@ Symlinked into the simulator at `/Volumes/www/badge-2024-software/sim/apps/`. `.
 
 ### Adding an effect
 
-The app is an effect picker: UP/DOWN scroll a built-in `Menu`, CONFIRM publishes `pressed` to `open/dogsbody/dome/<VALUE>` (same topic shape as the buttons/touch petals — `VALUE` is the topic leaf), that effect's dome preview draws as a backdrop, and one perimeter LED marks the scroll position. Touch petals (`TOUCH01–12`) publish `pressed` to `open/dogsbody/dome/TOUCHxx` directly, independent of the menu.
+The app is an effect picker: UP/DOWN scroll a built-in `Menu`, CONFIRM publishes the effect name (`VALUE`) as the payload to `open/dogsbody/thunderdome/effect`, that effect's dome preview draws as a backdrop, and one perimeter LED marks the scroll position.
 
 The effect `VALUE`s mirror the dome controller's effect files at `dogsbodytech/thunderdome` → `3d-controller/controller/thunderdome/effects/` (one badge module per non-procedural effect file, keyed by its stem: `clock_hand`, `expanding_rings`, `height_wave`). If the dome dispatches on hyphens instead, change each `VALUE` (one line).
 
@@ -27,7 +27,7 @@ Menu items are **auto-discovered** from `effects/` — one file per item, no reg
 from ..dome import draw_dome  # also DOME_TOP, DOME_BOTTOM for height gradients
 
 NAME = "Height Wave"     # label shown in the menu
-VALUE = "height_wave"    # topic leaf; CONFIRM publishes "pressed" there
+VALUE = "height_wave"    # effect name; CONFIRM publishes it to .../thunderdome/effect
 
 def draw(ctx):     # the dome graphic; color_fn returns (r,g,b) 0–1 per segment
     band = (DOME_TOP + DOME_BOTTOM) / 2
