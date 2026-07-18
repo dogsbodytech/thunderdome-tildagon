@@ -26,13 +26,13 @@ gh api "repos/dogsbodytech/thunderdome/contents/3d-controller/controller/thunder
   --jq '.[] | select(.type=="file") | .name | select(startswith("_") | not) | select(endswith(".py"))'
 ```
 
-> Safeguard: at time of writing, `registry.py`, `common.py`, and `procedural.py`
+> Safeguard: at time of writing, `Registry.py`, `Common.py`, and `Procedural.py`
 > are shared infrastructure that do **not** start with `_`, so the rule above
 > would wrongly include them. Skip any candidate that is not an actual renderer
 > (open it — a real effect defines a `render_*` / effect function, not a
 > catalogue/dataclass/helper). If a candidate is ambiguous, ask the human
 > rather than importing it. Procedural effects (defined only inside
-> `procedural.py` / the registry, with no file of their own) are out of scope.
+> `Procedural.py` / the registry, with no file of their own) are out of scope.
 
 ## Steps
 
@@ -58,13 +58,14 @@ sorted by filename, and `install-on-badge.py` copies the whole tree.
 
 Each `effects/<stem>.py` must define exactly:
 
-- `NAME` — menu label. Derive as `stem.replace("_", " ").title()` unless the
-  source suggests a better human name.
+- `NAME` — menu label. Stems are PascalCase; derive by inserting a space
+  before each interior capital (`ClockHand` → "Clock Hand") unless the source
+  suggests a better human name.
 - `VALUE` — the effect name. Use the **file stem verbatim** (e.g.
-  `clock_hand`). CONFIRM publishes it as the **payload** to
-  `open/dogsbody/thunderdome/effect`, so the dome must recognise this name.
-  (If the dome ever dispatches on hyphens instead of underscores, change
-  `VALUE` only — one line.)
+  `ClockHand`). CONFIRM publishes it as the **payload** to
+  `open/dogsbody/thunderdome/effect`, and the dome's MQTT bridge only accepts
+  names matching `[A-Z][A-Za-z0-9]{0,63}`. (If the dome's naming convention
+  changes again, change `VALUE` only — one line.)
 - `draw(ctx)` — a static 2D preview of the effect, drawn as the menu backdrop.
 
 ### Preview guidance
@@ -83,9 +84,9 @@ matches the effect's geometry — highlight the relevant struts, dim the rest:
 
 | Effect shape (from source) | Preview approach | Example in repo |
 |---|---|---|
-| Radial / angular sweep (a "hand", radar) | `math.atan2(my, mx)`; bright wedge near a fixed angle | `effects/clock_hand.py` |
-| Expanding shells / distance from centre | `math.sqrt(mx**2+my**2)`; alternate bright/dim bands | `effects/expanding_rings.py` |
-| Height / Z band moving vertically | bright band where `abs(my - band_y) <= h` | `effects/height_wave.py` |
+| Radial / angular sweep (a "hand", radar) | `math.atan2(my, mx)`; bright wedge near a fixed angle | `effects/ClockHand.py` |
+| Expanding shells / distance from centre | `math.sqrt(mx**2+my**2)`; alternate bright/dim bands | `effects/ExpandingRings.py` |
+| Height / Z band moving vertically | bright band where `abs(my - band_y) <= h` | `effects/HeightWave.py` |
 | Gradient / palette fill (fire, aurora) | interpolate colour by height using `DOME_TOP`/`DOME_BOTTOM` | — |
 
 (`mx, my` = segment midpoint `(x1+x2)/2, (y1+y2)/2`.) Keep the preview readable
@@ -100,7 +101,7 @@ import math
 from ..dome import draw_dome
 
 NAME = "Clock Hand"
-VALUE = "clock_hand"
+VALUE = "ClockHand"
 
 _ANGLE = math.radians(-60)
 _HALF = math.radians(24)

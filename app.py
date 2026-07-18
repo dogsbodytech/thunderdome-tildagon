@@ -22,8 +22,9 @@ TOPIC_BASE = b"open/dogsbody/thunderdome"
 # 12 o'clock (angle = i/12*2pi - 0.42pi, per emfcamp's spaceagon-test app).
 # The 2026 frontboard art prints one solar-system feature on each pad —
 # planets, but also Sol, two belts and Voyager 1 — clockwise from the EMF
-# logo at 12. Tapping a pad publishes the label's kebab-cased name
-# (e.g. "kuiper-belt") as the effect name.
+# logo at 12. Tapping a pad publishes the label's TitleCased name
+# (e.g. "KuiperBelt") as the effect name — the dome's MQTT bridge only
+# accepts names matching [A-Z][A-Za-z0-9]*.
 # ponytail: pad-to-body mapping read from an artwork photo — rotate this
 # list if a real badge shows otherwise.
 SPACE_BODIES = [
@@ -185,7 +186,7 @@ class ThunderdomeApp(app.App):
                 return
             if 0 <= idx < len(SPACE_BODIES):
                 label = SPACE_BODIES[idx]
-                self._send_effect(label.lower().replace(" ", "-"), label)
+                self._send_effect(label.replace(" ", ""), label)
 
     # --- LEDs ------------------------------------------------------------
 

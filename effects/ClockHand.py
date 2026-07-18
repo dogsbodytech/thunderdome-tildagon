@@ -3,7 +3,7 @@ import math
 from ..dome import classify_segments, draw_dome_groups
 
 NAME = "Clock Hand"
-VALUE = "clock_hand"
+VALUE = "ClockHand"
 
 _ANGLE = math.radians(-60)  # a fixed hand angle for the preview (y grows down)
 _HALF = math.radians(24)    # half-width of the highlighted wedge

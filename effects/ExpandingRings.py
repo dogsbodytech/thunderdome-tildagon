@@ -3,7 +3,7 @@ import math
 from ..dome import classify_segments, draw_dome_groups
 
 NAME = "Expanding Rings"
-VALUE = "expanding_rings"
+VALUE = "ExpandingRings"
 
 _RING_MM = 18  # radial spacing between rings, in screen units
 

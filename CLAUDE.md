@@ -19,15 +19,15 @@ Symlinked into the simulator at `/Volumes/www/badge-2024-software/sim/apps/`. `.
 
 The app is an effect picker: UP/DOWN scroll a built-in `Menu`, CONFIRM publishes the effect name (`VALUE`) as the payload to `open/dogsbody/thunderdome/effect`, that effect's dome preview draws as a backdrop, and one perimeter LED marks the scroll position.
 
-The effect `VALUE`s mirror the dome controller's effect files at `dogsbodytech/thunderdome` → `3d-controller/controller/thunderdome/effects/` (one badge module per non-procedural effect file, keyed by its stem: `clock_hand`, `expanding_rings`, `height_wave`). If the dome dispatches on hyphens instead, change each `VALUE` (one line).
+The effect `VALUE`s mirror the dome controller's effect files at `dogsbodytech/thunderdome` → `3d-controller/controller/thunderdome/effects/` (one badge module per non-procedural effect file, keyed by its stem: `ClockHand`, `ExpandingRings`, `HeightWave`). Names are PascalCase — the dome's MQTT bridge (`mqtt-client/mqtt_client.py`) only accepts payload names matching `[A-Z][A-Za-z0-9]{0,63}`; the old kebab-case aliases survive only in the controller's registry, not at the bridge. If the dome's naming changes again, change each `VALUE` (one line).
 
-Menu items are **auto-discovered** from `effects/` — one file per item, no registry to edit. To add one, drop `effects/<name>.py` defining `NAME`, `VALUE`, and `draw(ctx)`:
+Menu items are **auto-discovered** from `effects/` — one file per item, no registry to edit. To add one, drop `effects/<Name>.py` (PascalCase, matching the controller stem) defining `NAME`, `VALUE`, and `draw(ctx)`:
 
 ```python
 from ..dome import classify_segments, draw_dome_groups, DOME_TOP, DOME_BOTTOM
 
 NAME = "Height Wave"     # label shown in the menu
-VALUE = "height_wave"    # effect name; CONFIRM publishes it to .../thunderdome/effect
+VALUE = "HeightWave"     # effect name; CONFIRM publishes it to .../thunderdome/effect
 
 _BAND_Y = (DOME_TOP + DOME_BOTTOM) / 2
 

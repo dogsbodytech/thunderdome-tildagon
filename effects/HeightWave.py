@@ -1,7 +1,7 @@
 from ..dome import classify_segments, draw_dome_groups, DOME_TOP, DOME_BOTTOM
 
 NAME = "Height Wave"
-VALUE = "height_wave"
+VALUE = "HeightWave"
 
 _BAND_Y = (DOME_TOP + DOME_BOTTOM) / 2  # a mid-height band for the preview
 _HALF = 14  # half the band height, in screen units
