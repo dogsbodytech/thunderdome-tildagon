@@ -1,8 +1,8 @@
 #!/bin/sh
 # Copy the whole app tree to the badge, skipping caches.
-# Everything ships except __pycache__ and dot-prefixed files/dirs (.git can't
-# live on the badge and would make the copy hang). ponytail: assumes no spaces
-# in paths.
+# Everything ships except __pycache__, dot-prefixed files/dirs (.git can't
+# live on the badge and would make the copy hang), and .md docs. ponytail:
+# assumes no spaces in paths.
 set -e
 
 prune='( -name __pycache__ -o -name .* ! -name . )'
@@ -15,7 +15,7 @@ find . \( -name __pycache__ -o -name '.*' ! -name . \) -prune -o -type d ! -name
 done
 
 # Copy every file.
-find . \( -name __pycache__ -o -name '.*' ! -name . \) -prune -o -type f -print | while read -r f; do
+find . \( -name __pycache__ -o -name '.*' ! -name . -o -name '*.md' \) -prune -o -type f -print | while read -r f; do
     mpremote cp "$f" ":apps/thunderdome/${f#./}"
 done
 
